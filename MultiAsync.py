@@ -14,10 +14,11 @@ import json
 import os
 
 
-## Build Queue
+## 1. Build Queue
 input_companies = queue.Queue()
 fail_log = queue.Queue()
 
+## 2. Search query list
 companies = [
         "Agilysys, Inc.",
         "ASEC International Corporation",
@@ -45,19 +46,23 @@ companies = [
         "Yleiselektroniikka Oyj"
         ]
 
+## 3. transfer list into queue
 for company in companies:   
     input_companies.put("{} product".format(company))
 
 class newBingCrawler:
     def __init__(self):
+        ## init a new event loop for this threading(That is, one threading one event loop)
         self.loop = asyncio.new_event_loop()
 
+    ## 8.run into call function
     def __call__(self):
         async def fetch_coroutine(client, url):
             with async_timeout.timeout(10):
                 try: 
                     async with client.get(url) as response:
                         assert response.status == 200
+                        ## get purer text in every html file
                         if 'html' in str(response.content_type).lower():
                             html = await response.text()
                             soup = BeautifulSoup(html ,'lxml')
@@ -70,7 +75,9 @@ class newBingCrawler:
                 except:
                     self.failLinks.append(url)
 
+        ## 7. run into main function
         async def main(loop):
+            ## go to bing, input query and submit 
             driver = webdriver.PhantomJS()
             url = "https://www.bing.com/"
             driver.get(url)
@@ -96,14 +103,16 @@ class newBingCrawler:
             async with aiohttp.ClientSession(loop=loop, headers=headers, conn_timeout=5 ) as client:
                 tasks = [fetch_coroutine(client, url) for url in urls]
                 await asyncio.gather(*tasks)
- 
+        
+        ## 5. start async requests from a threading
         while True:
             try:
+                ## get data from queue
                 self.query = input_companies.get(timeout=1)   ##Build self.query
             except:
                 break
             
-            ## build self attr
+            ## build self attribute
             self.companyInfo = ""  ##Build self.companyInfo
             exclude = set(string.punctuation)
             companyName = self.query.replace(" product", "")
@@ -111,12 +120,14 @@ class newBingCrawler:
             self.companyName = companyName.replace(" ", "_").lower()  ##Build self.companyName
             self.failLinks = []  ##Build self.failLinks
 
-            ## start running loop
+            ## 6. start running loop
             self.loop.run_until_complete(main(self.loop))
 
-            ## After loop
+            ## 9. After loop
             fail_log.put({self.companyName:self.failLinks})
             
+
+            ##if no such directory, creat one
             if not os.path.isdir("comapnyEmbedding"):
                 os.mkdir("comapnyEmbedding")
 
@@ -127,15 +138,18 @@ class newBingCrawler:
             print("ThreadingID: " + str(id(self)) + ", " + companyName + " success")
 
 
+## 4. count of threadings you want to build  
 threads = []
 for i in range(4):
     newthread = threading.Thread(target=newBingCrawler())
     newthread.start()
     threads.append(newthread)
 
+## 10. join all threadings' result
 for thread in threads:
     thread.join()
 
+## 11. writing logs
 logs = []
 while True:
     try:
