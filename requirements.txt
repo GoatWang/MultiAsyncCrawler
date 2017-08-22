@@ -1,0 +1,7 @@
+aiohttp
+asyncio
+bs4
+selenium
+pandas
+simplejson==3.10.0
+lxml
