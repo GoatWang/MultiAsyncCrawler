@@ -53,7 +53,9 @@ for company in companies:
 class newBingCrawler:
     def __init__(self):
         ## init a new event loop for this threading(That is, one threading one event loop)
-        self.loop = asyncio.new_event_loop()
+        policy = asyncio.get_event_loop_policy()
+        self.loop = policy.new_event_loop()
+        asyncio.set_event_loop(self.loop)
 
     ## 8.run into call function
     def __call__(self):
